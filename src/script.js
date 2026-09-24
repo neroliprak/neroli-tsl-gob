@@ -88,6 +88,9 @@ const raycaster = new THREE.Raycaster();
 const cursor = new THREE.Vector2();
 const coordTouch = uniform(new THREE.Vector2());
 const touchLive = uniform(0);
+const cordes = [];
+const cordeMaterial = new THREE.MeshBasicNodeMaterial({});
+cordeMaterial.side = THREE.DoubleSide;
 
 // 0. FLOOR
 const planeGeometry = new THREE.PlaneGeometry(10, 10);
@@ -100,27 +103,15 @@ floor.position.y = 0.9;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// 1. CORDE
-
-const cordePlane = new THREE.PlaneGeometry(5, 0.05, 100, 10);
-const cordeMaterial = new THREE.MeshBasicNodeMaterial({});
-const corde = new THREE.Mesh(cordePlane, cordeMaterial);
-cordeMaterial.side = THREE.DoubleSide;
-corde.castShadow = true;
-corde.receiveShadow = true;
-corde.rotation.x = -Math.PI * 0.5;
-corde.position.y = 1;
-scene.add(corde);
-
 // 2. INTERACTION SOURIS
 
-window.addEventListener("click", (event) => {
+window.addEventListener("mousemove", (event) => {
   cursor.x = (event.clientX / window.innerWidth) * 2 - 1;
   cursor.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(cursor, camera);
 
-  const [intersection] = raycaster.intersectObject(corde);
+  const [intersection] = raycaster.intersectObjects(cordes);
   if (intersection) {
     coordTouch.value = intersection.uv;
     touchLive.value = 1;
@@ -134,23 +125,27 @@ const colorCordeShader = Fn(() => {
   const distance = abs(coordTouch.x.sub(currentUv));
   const touchStrength = distance.mul(touchLive).mul(10);
 
-  return mix(1, red, touchStrength);
+  return mix(red, 1, touchStrength);
 });
 
 const waveCordeShader = Fn(() => {
-  const wave = positionLocal.x.mul(PI.mul(12)).add(time).sin().mul(0.1);
   const currentUv = uv().x;
   const distance = abs(coordTouch.x.sub(currentUv));
   const touchStrength = distance.oneMinus().mul(touchLive).mul(1);
-
   const coordVibration = sin(time.mul(30)).mul(0.05).mul(touchStrength);
+  const wave = positionLocal.x
+    .mul(PI.mul(100))
+    .add(time)
+    .sin()
+    .mul(touchStrength)
+    .mul(0.01);
 
   const finalPosition = vec3(positionLocal);
 
   const transformedPosition = vec3(
     finalPosition.x,
     finalPosition.y.add(coordVibration),
-    finalPosition.z,
+    finalPosition.z.add(wave),
   );
   return transformedPosition;
 });
@@ -159,9 +154,20 @@ cordeMaterial.colorNode = colorCordeShader();
 cordeMaterial.positionNode = waveCordeShader();
 
 // 4. BOUCLE SUR LES CORDES
-const cordes = [];
+// 1. CORDES
 
-for (let index = 0; index < 5; index++) {}
+for (let index = 0; index < 5; index++) {
+  const cordePlane = new THREE.PlaneGeometry(5, 0.05, 100, 10);
+  const corde = new THREE.Mesh(cordePlane, cordeMaterial);
+
+  corde.castShadow = true;
+  corde.receiveShadow = true;
+  corde.rotation.x = -Math.PI * 0.5;
+  corde.position.y = 1;
+  corde.position.z = (index - 2) * 0.15;
+  scene.add(corde);
+  cordes.push(corde);
+}
 
 /**
  * Lights
@@ -207,7 +213,7 @@ const tick = () => {
 renderer.setAnimationLoop(() => {
   tick();
   raycaster.setFromCamera(cursor, camera);
-  raycaster.intersectObject(corde);
+  raycaster.intersectObjects(cordes);
 });
 
 console.log(renderer.backend);
