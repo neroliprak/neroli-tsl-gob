@@ -17,3 +17,8 @@ npm run build
 
 
 
+
+// OBJECTIF : Scène interactive d'une corde qui bouge en fonction de la souris
+// 1. Plusieurs corde (plane) qui bouge en sinus 
+// 2. Interaction avec la souris par rapport à la plane
+
