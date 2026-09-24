@@ -14,6 +14,9 @@ import {
   If,
   greaterThan,
   PI,
+  uniform,
+  abs,
+  sub,
 } from "three/tsl";
 
 /**
@@ -83,39 +86,63 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x111111);
 
-window.addEventListener("pointermove", (event) => {
+const raycaster = new THREE.Raycaster();
+const cursor = new THREE.Vector2();
+const coordTouch = uniform(new THREE.Vector2());
+
+// 1. CORDE
+
+const cordePlane = new THREE.PlaneGeometry(5, 0.1, 100, 10);
+const cordeMaterial = new THREE.MeshBasicNodeMaterial({});
+const corde = new THREE.Mesh(cordePlane, cordeMaterial);
+cordeMaterial.side = THREE.DoubleSide;
+corde.castShadow = true;
+corde.receiveShadow = true;
+corde.rotation.x = -Math.PI * 0.5;
+corde.position.y = 1;
+scene.add(corde);
+
+// 2. INTERACTION SOURIS
+
+window.addEventListener("click", (event) => {
   cursor.x = (event.clientX / window.innerWidth) * 2 - 1;
   cursor.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(cursor, camera);
+
+  const [intersection] = raycaster.intersectObject(corde);
+  if (intersection) {
+    coordTouch.value = intersection.uv;
+  }
 });
 
-{
-  // 1. CORDE
+// 3. SHADER CORDE QUI BOUGE
 
-  const cordePlane = new THREE.PlaneGeometry(5, 0.02, 100, 10);
-  const cordeMaterial = new THREE.MeshBasicNodeMaterial({});
-  const corde = new THREE.Mesh(cordePlane, cordeMaterial);
-  cordeMaterial.side = THREE.DoubleSide;
-  corde.castShadow = true;
-  corde.receiveShadow = true;
-  corde.rotation.x = -Math.PI * 0.5;
-  corde.position.y = 1;
-  scene.add(corde);
+const colorCordeShader = Fn(() => {
+  const currentUv = uv().x;
+  const distance = abs(coordTouch.x.sub(currentUv));
 
-  // 2. CORDE QUI BOUGE SUR LE SINUS
+  return vec3(mix(1, 0, distance.oneMinus()));
+});
 
-  // const wave = coords.x.mul(PI.mul(4)).sin().div(4).add(0.5);
-  // const distance = abs(coords.y.sub(wave));
+cordeMaterial.colorNode = colorCordeShader();
 
-  const wave = positionLocal.x.mul(time).mul(PI.mul(12)).sin().mul(0.05);
+// const distanceWave = abs(currentUv.x.sub(wave));
 
-  cordeMaterial.colorNode = vec3(1, 1, 1);
+// return currentUv.sub(coordTouch).length();
 
-  cordeMaterial.positionNode = vec3(
-    positionLocal.x,
-    positionLocal.y,
-    positionLocal.z.add(wave),
-  );
-}
+// const wave = coords.x.mul(PI.mul(4)).sin().div(4).add(0.5);
+// const distance = abs(coords.y.sub(wave));
+
+// const wave = positionLocal.x.mul(PI.mul(12)).add(time).sin().mul(0.1);
+
+// cordeMaterial.colorNode = vec3(1, 1, 1);
+
+// cordeMaterial.positionNode = vec3(
+//   positionLocal.x,
+//   positionLocal.y,
+//   positionLocal.z.add(wave),
+// );
 
 /**
  * Lights
@@ -157,6 +184,8 @@ const tick = () => {
 
 renderer.setAnimationLoop(() => {
   tick();
+  raycaster.setFromCamera(cursor, camera);
+  raycaster.intersectObject(corde);
 });
 
 console.log(renderer.backend);
