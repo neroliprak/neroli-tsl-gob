@@ -73,6 +73,8 @@ const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 1, 0);
 controls.enableDamping = true;
 
+const red = color("#e63946");
+
 /**
  * Renderer
  */
@@ -122,10 +124,16 @@ const colorCordeShader = Fn(() => {
   const currentUv = uv().x;
   const distance = abs(coordTouch.x.sub(currentUv));
 
-  return vec3(mix(1, 0, distance.oneMinus()));
+  return vec3(mix(1, red, distance.oneMinus().mul(5)));
+});
+
+const waveCordeShader = Fn(() => {
+  const wave = positionLocal.x.mul(PI.mul(12)).add(time).sin().mul(0.1);
+  return vec3(positionLocal.x, positionLocal.y, positionLocal.z.add(wave));
 });
 
 cordeMaterial.colorNode = colorCordeShader();
+cordeMaterial.positionNode = waveCordeShader();
 
 // const distanceWave = abs(currentUv.x.sub(wave));
 
