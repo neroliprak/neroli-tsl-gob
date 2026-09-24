@@ -91,6 +91,7 @@ renderer.setClearColor(0x111111);
 const raycaster = new THREE.Raycaster();
 const cursor = new THREE.Vector2();
 const coordTouch = uniform(new THREE.Vector2());
+const touchLive = uniform(0);
 
 // 1. CORDE
 
@@ -115,6 +116,7 @@ window.addEventListener("click", (event) => {
   const [intersection] = raycaster.intersectObject(corde);
   if (intersection) {
     coordTouch.value = intersection.uv;
+    touchLive.value = 2;
   }
 });
 
@@ -123,8 +125,9 @@ window.addEventListener("click", (event) => {
 const colorCordeShader = Fn(() => {
   const currentUv = uv().x;
   const distance = abs(coordTouch.x.sub(currentUv));
+  const touchStrength = distance.mul(touchLive).mul(10);
 
-  return vec3(mix(1, red, distance.oneMinus().mul(5)));
+  return mix(1, red, touchStrength);
 });
 
 const waveCordeShader = Fn(() => {
@@ -134,23 +137,6 @@ const waveCordeShader = Fn(() => {
 
 cordeMaterial.colorNode = colorCordeShader();
 cordeMaterial.positionNode = waveCordeShader();
-
-// const distanceWave = abs(currentUv.x.sub(wave));
-
-// return currentUv.sub(coordTouch).length();
-
-// const wave = coords.x.mul(PI.mul(4)).sin().div(4).add(0.5);
-// const distance = abs(coords.y.sub(wave));
-
-// const wave = positionLocal.x.mul(PI.mul(12)).add(time).sin().mul(0.1);
-
-// cordeMaterial.colorNode = vec3(1, 1, 1);
-
-// cordeMaterial.positionNode = vec3(
-//   positionLocal.x,
-//   positionLocal.y,
-//   positionLocal.z.add(wave),
-// );
 
 /**
  * Lights
@@ -180,6 +166,8 @@ timer.connect(document);
 const tick = () => {
   timer.update();
   const delta = timer.getDelta();
+
+  touchLive.value = touchLive.value - delta * 2;
 
   if (delta > 0.1) console.log(delta);
 
