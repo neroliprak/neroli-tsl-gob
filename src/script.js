@@ -6,13 +6,9 @@ import {
   mix,
   uv,
   positionLocal,
-  normalLocal,
   vec3,
   time,
-  cos,
   sin,
-  If,
-  greaterThan,
   PI,
   uniform,
   abs,
@@ -93,9 +89,20 @@ const cursor = new THREE.Vector2();
 const coordTouch = uniform(new THREE.Vector2());
 const touchLive = uniform(0);
 
+// 0. FLOOR
+const planeGeometry = new THREE.PlaneGeometry(10, 10);
+const planeMaterial = new THREE.MeshStandardMaterial({
+  color: 0x111111,
+});
+const floor = new THREE.Mesh(planeGeometry, planeMaterial);
+floor.rotation.x = -Math.PI * 0.5;
+floor.position.y = 0.9;
+floor.receiveShadow = true;
+scene.add(floor);
+
 // 1. CORDE
 
-const cordePlane = new THREE.PlaneGeometry(5, 0.1, 100, 10);
+const cordePlane = new THREE.PlaneGeometry(5, 0.05, 100, 10);
 const cordeMaterial = new THREE.MeshBasicNodeMaterial({});
 const corde = new THREE.Mesh(cordePlane, cordeMaterial);
 cordeMaterial.side = THREE.DoubleSide;
@@ -116,7 +123,7 @@ window.addEventListener("click", (event) => {
   const [intersection] = raycaster.intersectObject(corde);
   if (intersection) {
     coordTouch.value = intersection.uv;
-    touchLive.value = 2;
+    touchLive.value = 1;
   }
 });
 
@@ -132,11 +139,29 @@ const colorCordeShader = Fn(() => {
 
 const waveCordeShader = Fn(() => {
   const wave = positionLocal.x.mul(PI.mul(12)).add(time).sin().mul(0.1);
-  return vec3(positionLocal.x, positionLocal.y, positionLocal.z.add(wave));
+  const currentUv = uv().x;
+  const distance = abs(coordTouch.x.sub(currentUv));
+  const touchStrength = distance.oneMinus().mul(touchLive).mul(1);
+
+  const coordVibration = sin(time.mul(30)).mul(0.05).mul(touchStrength);
+
+  const finalPosition = vec3(positionLocal);
+
+  const transformedPosition = vec3(
+    finalPosition.x,
+    finalPosition.y.add(coordVibration),
+    finalPosition.z,
+  );
+  return transformedPosition;
 });
 
 cordeMaterial.colorNode = colorCordeShader();
 cordeMaterial.positionNode = waveCordeShader();
+
+// 4. BOUCLE SUR LES CORDES
+const cordes = [];
+
+for (let index = 0; index < 5; index++) {}
 
 /**
  * Lights
@@ -167,7 +192,8 @@ const tick = () => {
   timer.update();
   const delta = timer.getDelta();
 
-  touchLive.value = touchLive.value - delta * 2;
+  touchLive.value = Math.max(touchLive.value - delta * 2, 0);
+  // console.log(touchLive.value);
 
   if (delta > 0.1) console.log(delta);
 
