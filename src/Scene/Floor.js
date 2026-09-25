@@ -12,8 +12,11 @@ export class Floor {
   }
 
   setMaterial() {
+    const texture = new THREE.TextureLoader().load("/textures/floor-noise.png");
+
     this.material = new THREE.MeshStandardMaterial({
       color: 0x111111,
+      map: texture,
     });
   }
 

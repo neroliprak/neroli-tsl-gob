@@ -21,12 +21,12 @@ const colors = [
   ["#6a5411", "#fff1b7"],
   ["#11572b", "#c7ffd1"],
   ["#0f4a3e", "#beffec"],
-  ["#0a2540", "#b3ddff"],
-  ["#1d0f46", "#d0c0ff"],
+  ["#0a2540", "#cde8ff"],
+  ["#1d0f46", "#eae2ff"],
 ];
 
 export class Corde {
-  // Piste optimisation -> singleton
+  // Piste optimisation -> singleton et vérifier qu'il ne soit instancier qu'une seule fois
   // static geometryCorde = null;
   // static materialCorde = null;
 
@@ -34,6 +34,7 @@ export class Corde {
     this.index = index;
     this.geometryWidth = 2;
     this.coordTouch = uniform(new THREE.Vector2());
+    this.bulbVisible = uniform(0);
     this.touchLive = uniform(0);
     const [colorA, colorB] = colors[index % colors.length];
     this.colorA = color(colorA);
@@ -63,11 +64,13 @@ export class Corde {
 
       const distance = abs(this.coordTouch.x.sub(currentUv));
       const touchStrength = distance.mul(10).oneMinus().mul(this.touchLive);
-      const coordVibration = sin(time.mul(10))
+
+      const coordVibration = sin(time.mul(30))
         .mul(0.05)
         .mul(touchStrength)
         .mul(extremity);
 
+      //
       const wave = distance
         .mul(20)
         .sub(this.touchLive.oneMinus().mul(5))
@@ -83,18 +86,13 @@ export class Corde {
       );
     })();
 
-    const cordeGeometry = new THREE.PlaneGeometry(
-      this.geometryWidth,
-      0.05,
-      100,
-      10,
-    );
+    const cordeGeometry = new THREE.PlaneGeometry(1, 0.05, 100, 10);
 
     const mesh = new THREE.Mesh(cordeGeometry, cordeMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.rotation.z = Math.PI * 0.5;
-    mesh.position.y = 1.1 + this.index * 0.05;
+    mesh.position.y = 1.5 + this.index * 0.05;
     mesh.position.z = (this.index - 3) * 0.07;
     return mesh;
   }

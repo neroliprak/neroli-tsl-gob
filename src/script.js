@@ -12,6 +12,7 @@ import {
   color,
   mix,
   uv,
+  cos,
   positionLocal,
   vec3,
   time,
@@ -73,7 +74,7 @@ const camera = new THREE.PerspectiveCamera(
   100,
 );
 camera.position.x = 3.5;
-camera.position.y = 1.5;
+camera.position.y = 2;
 camera.position.z = 4;
 scene.add(camera);
 
@@ -120,26 +121,26 @@ scene.add(floor.mesh);
  * BULB
  */
 
-const bulbGeometry = new THREE.SphereGeometry(0.05, 16, 8);
-const bulbColor = uniform(color(0xffffff));
-const bulbMaterial = new THREE.MeshBasicNodeMaterial();
-bulbMaterial.colorNode = bulbColor.mul(2);
+const bulbGeometry = new THREE.IcosahedronGeometry(0.06, 0);
+const bulbColor = uniform(color(0x1d3557));
+const bulbMaterial = new THREE.MeshBasicNodeMaterial({
+  transparent: true,
+  opacity: 0,
+});
 const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
-const bulbSpotLight = new THREE.SpotLight(
-  0xffffff,
-  20,
-  100,
-  Math.PI / 6,
-  0.5,
-  1,
-);
+const bulbSpotLight = new THREE.SpotLight(0xffffff, 90, 800, Math.PI / 4, 1, 1);
 
-bulbSpotLight.position.set(0, 2.7, 0);
-bulbSpotLight.target.position.set(0, 1.1, 0);
+bulbMaterial.colorNode = bulbColor.mul(2);
+bulbMaterial.positionNode = vec3(
+  positionLocal.x.add(positionLocal.x.mul(sin(time).mul(5))),
+  positionLocal.y.add(positionLocal.y.mul(cos(time).mul(2))),
+  positionLocal.z,
+);
 bulbSpotLight.add(bulb);
-bulbSpotLight.position.set(0, 2.7, 0);
+bulbSpotLight.position.set(0, 2.8, 0);
 scene.add(bulbSpotLight);
-bulbSpotLight.castShadow = true;
+
+scene.fog = new THREE.Fog(0x111111, 2, 11);
 
 /**
  * Post-processing
@@ -149,9 +150,9 @@ const scenePass = pass(scene, camera);
 const sceneOutput = scenePass.getTextureNode("output");
 
 const bloomSettings = {
-  strength: 1,
+  strength: 1.5,
   radius: 0.7,
-  threshold: 0.7,
+  threshold: 1,
 };
 
 const bloomPass = bloom(
@@ -187,12 +188,15 @@ window.addEventListener("mousemove", (event) => {
 
   const cordeMeshes = cordes.map((corde) => corde.mesh);
   const [intersection] = raycaster.intersectObjects(cordeMeshes);
+
   if (!intersection) return;
   const corde = cordes.find((corde) => corde.mesh === intersection.object);
   if (!corde) return;
 
   corde.touch(intersection.uv);
 
+  bulbMaterial.opacity = 1;
+  bulbSpotLight.intensity = 90;
   bulbColor.value.set(corde.bulbColor);
   bulbSpotLight.color.set(corde.bulbColor);
 
@@ -218,8 +222,8 @@ scene.add(directionalLight);
 const ambientLight = new THREE.AmbientLight(0x859dff, 1);
 scene.add(ambientLight);
 
-const spotLight = new THREE.SpotLight(0x5496ae, 20, 100, Math.PI / 6, 0.5, 1);
-spotLight.position.set(1, 4, -1);
+const spotLight = new THREE.SpotLight(0x859dff, 20, 100, Math.PI / 6, 4, 1);
+spotLight.position.set(1, 3, -1);
 scene.add(spotLight);
 
 /**
@@ -233,9 +237,14 @@ const tick = () => {
 
   const delta = timer.getDelta();
 
+  bulbMaterial.opacity = Math.max(bulbMaterial.opacity - delta * 4, 0);
+  bulbSpotLight.intensity = Math.max(bulbSpotLight.intensity - delta * 200, 0);
+
   cordes.forEach((corde) => {
     corde.update(delta);
   });
+
+  bulb.rotation.x += 0.01;
 
   controls.update();
   renderPipeline.render(scene, camera);
