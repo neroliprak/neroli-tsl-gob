@@ -8,7 +8,7 @@ export class Floor {
   }
 
   setGeometry() {
-    this.geometry = new THREE.CircleGeometry(2, 64);
+    this.geometry = new THREE.CircleGeometry(4, 64);
   }
 
   setMaterial() {
