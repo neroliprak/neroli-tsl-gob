@@ -4,6 +4,24 @@ import { Corde } from "./Objects/Corde";
 import { Floor } from "./Scene/Floor";
 import { AudioManager } from "./AudioManager";
 import { Harp } from "./Objects/Harp";
+import { bloom } from "three/addons/tsl/display/BloomNode.js";
+
+import {
+  pass,
+  Fn,
+  color,
+  mix,
+  uv,
+  positionLocal,
+  vec3,
+  time,
+  sin,
+  PI,
+  uniform,
+  abs,
+  smoothstep,
+  min,
+} from "three/tsl";
 
 /**
  * Base
@@ -20,6 +38,8 @@ const textureLoader = new THREE.TextureLoader();
 // Audio
 const audioManager = new AudioManager();
 audioManager.load();
+
+let cordeIndex = 0;
 
 /**
  * Sizes
@@ -46,21 +66,35 @@ window.addEventListener("resize", () => {
 /**
  * Camera
  */
-// Base camera
 const camera = new THREE.PerspectiveCamera(
   35,
   sizes.width / sizes.height,
   0.1,
   100,
 );
-camera.position.x = 5;
-camera.position.y = 3;
+camera.position.x = 3.5;
+camera.position.y = 1.5;
 camera.position.z = 4;
 scene.add(camera);
 
+/**
+ * HARP DE LA SCENE
+ */
+const harp = new Harp();
+const harpModel = await harp.load();
+harpModel.position.y = 1.7;
+harpModel.position.z = -0.1;
+harpModel.rotation.y = 0.2;
+scene.add(harpModel);
+
 // Controls
 const controls = new OrbitControls(camera, canvas);
-controls.target.set(0, 1, 0);
+// controls.target.set(0, 1, 0);
+controls.target.set(
+  harpModel.position.x,
+  harpModel.position.y,
+  harpModel.position.z,
+);
 controls.enableDamping = true;
 
 /**
@@ -83,31 +117,42 @@ const floor = new Floor();
 scene.add(floor.mesh);
 
 /**
- * HARP DE LA SCENE
+ * BULB
  */
-const harp = new Harp();
-const harpModel = await harp.load();
-harpModel.position.y = 1.7;
-harpModel.position.z = -0.1;
-// je veux une rotation légèrement vers la droite
-harpModel.rotation.y = 0.2;
-scene.add(harpModel);
+const bulbGeometry = new THREE.SphereGeometry(0.05, 16, 8);
+const bulbMaterial = new THREE.MeshStandardMaterial({
+  emissive: 0xffffff,
+  emissiveIntensity: 1,
+  color: 0x000000,
+});
+const bulbLight = new THREE.PointLight(0xffffff, 1, 100, 2);
+bulbLight.add(new THREE.Mesh(bulbGeometry, bulbMaterial));
+bulbLight.position.set(0, 2.7, 0);
+scene.add(bulbLight);
 
-// const stone = new THREE.Mesh(
-//   new THREE.OctahedronGeometry(0.3, 64, 64),
-//   new THREE.MeshBasicMaterial({ color: 0x002836 }),
-// );
-// stone.position.set(0, 1.1, -0.3);
-// stone.material.transparent = true;
-// stone.material.opacity = 0.8;
-// scene.add(stone);
+// Avec un shader alors je modifie la couleur du bulb en fonction de l'intensité de la lumière
 
-// const stone2 = new THREE.Mesh(
-//   new THREE.OctahedronGeometry(0.2, 64, 64),
-//   new THREE.MeshBasicMaterial({ color: 0x2cc7ff }),
-// );
-// stone2.position.set(0.1, 1.1, -0.3);
-// scene.add(stone2);
+/**
+ * Post-processing
+ */
+const renderPipeline = new THREE.RenderPipeline(renderer);
+const scenePass = pass(scene, camera);
+const sceneOutput = scenePass.getTextureNode("output");
+
+const bloomSettings = {
+  strength: 1,
+  radius: 0.7,
+  threshold: 0.7,
+};
+
+const bloomPass = bloom(
+  sceneOutput,
+  bloomSettings.strength,
+  bloomSettings.radius,
+  bloomSettings.threshold,
+);
+const bloomOutput = sceneOutput.add(bloomPass);
+renderPipeline.outputNode = bloomOutput;
 
 /**
  * Boucle des cordes
@@ -117,7 +162,7 @@ const cordes = [];
 
 for (let index = 0; index < 7; index++) {
   const corde = new Corde(index);
-
+  cordeIndex = index;
   scene.add(corde.mesh);
   cordes.push(corde);
 }
@@ -183,7 +228,7 @@ const tick = () => {
   });
 
   controls.update();
-  renderer.render(scene, camera);
+  renderPipeline.render(scene, camera);
 };
 
 renderer.setAnimationLoop(() => {

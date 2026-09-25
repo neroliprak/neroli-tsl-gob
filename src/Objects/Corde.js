@@ -11,30 +11,31 @@ import {
   PI,
   uniform,
   abs,
+  smoothstep,
+  min,
 } from "three/tsl";
 
 const colors = [
-  ["#ffaeae", "#ff0000"],
-  ["#ffa94d", "#ff6f00"],
-  ["#ffe066", "#ffc107"],
-  ["#69db7c", "#00a63c"],
-  ["#38d9a9", "#008f72"],
-  ["#4dabf7", "#0066cc"],
-  ["#b197fc", "#7048e8"],
+  ["#530707", "#ffd7d7"],
+  ["#582d0b", "#ffdcb6"],
+  ["#6a5411", "#fff1b7"],
+  ["#11572b", "#c7ffd1"],
+  ["#0f4a3e", "#b0ffe7"],
+  ["#0a2540", "#9ad2ff"],
+  ["#1d0f46", "#d0c0ff"],
 ];
 
 export class Corde {
+  static geometryCorde = null;
+  static materialCorde = null;
   constructor(index) {
     this.index = index;
-
+    this.geometryWidth = 2;
     this.coordTouch = uniform(new THREE.Vector2());
     this.touchLive = uniform(0);
-
     const [colorA, colorB] = colors[index % colors.length];
-
     this.colorA = color(colorA);
     this.colorB = color(colorB);
-
     this.mesh = this.createMesh();
   }
 
@@ -52,23 +53,25 @@ export class Corde {
 
     cordeMaterial.positionNode = Fn(() => {
       const currentUv = uv().x;
+
+      const extremityRight = smoothstep(0.2, 1.0, currentUv);
+      const extremityLeft = smoothstep(1.0, 0.8, currentUv);
+      const extremity = min(extremityRight, extremityLeft);
+
       const distance = abs(this.coordTouch.x.sub(currentUv));
       const touchStrength = distance.mul(10).oneMinus().mul(this.touchLive);
-      const coordVibration = sin(time.mul(60)).mul(0.005).mul(touchStrength);
-
-      // const wave = positionLocal.x
-      //   .mul(PI.mul(5))
-      //   .add(time)
-      //   .sin()
-      //   .mul(touchStrength)
-      //   .mul(0.01);
+      const coordVibration = sin(time.mul(10))
+        .mul(0.05)
+        .mul(touchStrength)
+        .mul(extremity);
 
       const wave = distance
-        .mul(30)
-        .sub(this.touchLive.oneMinus().mul(15))
+        .mul(20)
+        .sub(this.touchLive.oneMinus().mul(5))
         .sin()
         .mul(this.touchLive)
-        .mul(0.03);
+        .mul(0.05)
+        .mul(extremity);
 
       return vec3(
         positionLocal.x,
@@ -77,18 +80,19 @@ export class Corde {
       );
     })();
 
-    const cordeGeometry = new THREE.PlaneGeometry(2, 0.05, 100, 10);
+    const cordeGeometry = new THREE.PlaneGeometry(
+      this.geometryWidth,
+      0.05,
+      100,
+      10,
+    );
 
     const mesh = new THREE.Mesh(cordeGeometry, cordeMaterial);
-
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-
     mesh.rotation.z = Math.PI * 0.5;
-
-    mesh.position.y = 1 + this.index * 0.05;
+    mesh.position.y = 1.1 + this.index * 0.05;
     mesh.position.z = (this.index - 3) * 0.07;
-
     return mesh;
   }
 
