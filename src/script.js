@@ -39,7 +39,7 @@ const textureLoader = new THREE.TextureLoader();
 const audioManager = new AudioManager();
 audioManager.load();
 
-let cordeIndex = 0;
+const cordes = [];
 
 /**
  * Sizes
@@ -119,18 +119,27 @@ scene.add(floor.mesh);
 /**
  * BULB
  */
-const bulbGeometry = new THREE.SphereGeometry(0.05, 16, 8);
-const bulbMaterial = new THREE.MeshStandardMaterial({
-  emissive: 0xffffff,
-  emissiveIntensity: 1,
-  color: 0x000000,
-});
-const bulbLight = new THREE.PointLight(0xffffff, 1, 100, 2);
-bulbLight.add(new THREE.Mesh(bulbGeometry, bulbMaterial));
-bulbLight.position.set(0, 2.7, 0);
-scene.add(bulbLight);
 
-// Avec un shader alors je modifie la couleur du bulb en fonction de l'intensité de la lumière
+const bulbGeometry = new THREE.SphereGeometry(0.05, 16, 8);
+const bulbColor = uniform(color(0xffffff));
+const bulbMaterial = new THREE.MeshBasicNodeMaterial();
+bulbMaterial.colorNode = bulbColor.mul(2);
+const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
+const bulbSpotLight = new THREE.SpotLight(
+  0xffffff,
+  20,
+  100,
+  Math.PI / 6,
+  0.5,
+  1,
+);
+
+bulbSpotLight.position.set(0, 2.7, 0);
+bulbSpotLight.target.position.set(0, 1.1, 0);
+bulbSpotLight.add(bulb);
+bulbSpotLight.position.set(0, 2.7, 0);
+scene.add(bulbSpotLight);
+bulbSpotLight.castShadow = true;
 
 /**
  * Post-processing
@@ -155,14 +164,11 @@ const bloomOutput = sceneOutput.add(bloomPass);
 renderPipeline.outputNode = bloomOutput;
 
 /**
- * Boucle des cordes
+ * BOUCLE CORDES
  */
-
-const cordes = [];
 
 for (let index = 0; index < 7; index++) {
   const corde = new Corde(index);
-  cordeIndex = index;
   scene.add(corde.mesh);
   cordes.push(corde);
 }
@@ -186,6 +192,10 @@ window.addEventListener("mousemove", (event) => {
   if (!corde) return;
 
   corde.touch(intersection.uv);
+
+  bulbColor.value.set(corde.bulbColor);
+  bulbSpotLight.color.set(corde.bulbColor);
+
   audioManager.play(corde.index);
 });
 

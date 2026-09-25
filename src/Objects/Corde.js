@@ -20,14 +20,16 @@ const colors = [
   ["#582d0b", "#ffdcb6"],
   ["#6a5411", "#fff1b7"],
   ["#11572b", "#c7ffd1"],
-  ["#0f4a3e", "#b0ffe7"],
-  ["#0a2540", "#9ad2ff"],
+  ["#0f4a3e", "#beffec"],
+  ["#0a2540", "#b3ddff"],
   ["#1d0f46", "#d0c0ff"],
 ];
 
 export class Corde {
-  static geometryCorde = null;
-  static materialCorde = null;
+  // Piste optimisation -> singleton
+  // static geometryCorde = null;
+  // static materialCorde = null;
+
   constructor(index) {
     this.index = index;
     this.geometryWidth = 2;
@@ -36,6 +38,7 @@ export class Corde {
     const [colorA, colorB] = colors[index % colors.length];
     this.colorA = color(colorA);
     this.colorB = color(colorB);
+    this.bulbColor = colorB;
     this.mesh = this.createMesh();
   }
 
